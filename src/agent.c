@@ -76,13 +76,18 @@ bool isOver(StateNode* node, I32 maximizingPlayer) {
     counter++;
   }
 
-  if (whitePieces && blackPieces) return false;
+  // If the player is checking for loss and they still have pieces, return false
+  if ((maximizingPlayer && whitePieces) || (!maximizingPlayer && blackPieces)) return false;
 
-  if (!maximizingPlayer && (whitePieces || !blackPieces)) node->score = INT_MAX;
-  if (maximizingPlayer && (blackPieces || !whitePieces)) node->score = INT_MIN;
+  // Reading: we are black, we have no more pieces. This move will lead to a win for white
+  // set score to INT_MAX
+  if (!maximizingPlayer && !blackPieces) node->score = INT_MAX;
+
+  // Reading: we are white, we have no more pieces. This move will lead to a win for black
+  // set score to INT_MIN 
+  if (maximizingPlayer && !whitePieces) node->score = INT_MIN;
 
   return true; 
-
 }
 
 
@@ -211,8 +216,7 @@ void StateNodeCalcCost(StateNode* node) {
   // printf("This state's score: %d\n", __builtin_popcountll(whitePieces) - __builtin_popcountll(blackPieces));
 
   node->score = ((__builtin_popcountll(whitePieces)-__builtin_popcountll(blackPieces)) + 
-                 ((__builtin_popcountll(whiteEdgePieces))) - ((__builtin_popcountll(blackEdgePieces))) +
-                 ((__builtin_popcountll(whiteCornerPieces))) - ((__builtin_popcountll(blackCornerPieces)))
+                 (2*(__builtin_popcountll(whiteCornerPieces))) - (2*(__builtin_popcountll(blackCornerPieces)))
                  );
 }
 

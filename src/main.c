@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
   //    -> Even depth = ends by checking score on agent turn
   int depth = 6;
   while (gaming) {
-    if (turns >= 6) depth = 4;
+    if (turns >= 6) depth = 5;
 
     if (blackIsAgent) {
       agentMove(agentPlayer, &board, stateNodePool, depth);
