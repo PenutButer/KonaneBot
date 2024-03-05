@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
     }
 
     // show board
-    printBoardToConsole(&board);
+    // printBoardToConsole(&board);
     turns++;
   }
 
