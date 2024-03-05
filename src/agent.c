@@ -11,6 +11,7 @@
 #define ALL_BLACK 0xAA55AA55AA55AA55
 #define ALL_WHITE 0x55AA55AA55AA55AA
 #define DEPTH 5
+#define EDGE_PIECES 0xFF818181818181FF
 
 #define INT_MAX 127
 #define INT_MIN -128
@@ -72,8 +73,14 @@ bool isOver(StateNode* node) {
     counter++;
   }
 
+  // White pieces can't capture -> set this node as extremely black favoured
   if (!whitePieces) node->score = INT_MIN;
+
+  // White pieces can't capture -> set this node as extremely white favoured
   if (!blackPieces) node->score = INT_MAX;
+
+  // Both pieces can't move, give this state a 0
+  if (!whitePieces && !blackPieces) node->score = 0;
 
   return !(whitePieces && blackPieces);
 }
@@ -139,6 +146,7 @@ void agentMove(U8 agentPlayer, BitBoard* board, StateNodePool *pool, int depth) 
 void StateNodeCalcCost(StateNode* node) {
   // These hold the pieces that are able to move
   U64 whitePieces = 0, blackPieces = 0;
+  U64 whiteEdgePieces = 0, blackEdgePieces = 0;
   
   // Get white pieces empty spots
   U64 whiteSpots = getPlayerEmptySpace(node->board, PlayerKind_White);
@@ -161,6 +169,7 @@ void StateNodeCalcCost(StateNode* node) {
         // piece reachable
         if (piecesList[j]) {
           whitePieces |= (piecesList[j] & ALL_WHITE);
+          whiteEdgePieces |= (piecesList[j] & ALL_WHITE & EDGE_PIECES);
         }
       }
       free(piecesList);
@@ -182,6 +191,7 @@ void StateNodeCalcCost(StateNode* node) {
         // piece reachable
         if (piecesList[j]) {
           blackPieces |= (piecesList[j] & ALL_BLACK);
+          blackEdgePieces |= (piecesList[j] & ALL_BLACK & EDGE_PIECES);
         }
       }
       free(piecesList);
@@ -195,7 +205,9 @@ void StateNodeCalcCost(StateNode* node) {
   // printf("# of black pieces movable: %d\n", __builtin_popcountll(blackPieces));
   // printf("This state's score: %d\n", __builtin_popcountll(whitePieces) - __builtin_popcountll(blackPieces));
 
-  node->score = __builtin_popcountll(whitePieces)-__builtin_popcountll(blackPieces);
+  node->score = ((__builtin_popcountll(whitePieces)-__builtin_popcountll(blackPieces)) + 
+                 (2*(__builtin_popcountll(whiteEdgePieces)))-(2*(__builtin_popcountll(blackEdgePieces))
+                 ));
 }
 
 

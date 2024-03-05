@@ -141,9 +141,10 @@ int main(int argc, char** argv) {
   // Note: 
   //    -> Odd depth = ends by checking score on opponent's turn
   //    -> Even depth = ends by checking score on agent turn
-  int depth = 7;
+  int depth = 9;
   while (gaming) {
-    if (turns >= 4) depth = 5;
+    if (turns >= 3) depth = 7;
+    if (turns >= 5) depth = 5;
 
     if (blackIsAgent) {
       agentMove(agentPlayer, &board, stateNodePool, depth);
@@ -162,12 +163,8 @@ int main(int argc, char** argv) {
       mainInput(&board, agentOpponent);
     }
 
-    // calculate score
-    // minimax(pool, child, 2, INT_MIN, INT_MAX, (playerKind == PlayerKind_White) ? true : false);
-
     // show board
-    // printBoardToConsole(&board);
-    // StateNodePoolFree(stateNodePool, stateNode);
+    printBoardToConsole(&board);
     turns++;
   }
 
