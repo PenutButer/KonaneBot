@@ -11,7 +11,8 @@
 #define ALL_BLACK 0xAA55AA55AA55AA55
 #define ALL_WHITE 0x55AA55AA55AA55AA
 #define DEPTH 5
-#define EDGE_PIECES 0xFF818181818181FF
+#define EDGE_PIECES 0x7E8181818181817E
+#define CORNER_PIECES 0x8100000000000081
 
 #define INT_MAX 127
 #define INT_MIN -128
@@ -147,6 +148,7 @@ void StateNodeCalcCost(StateNode* node) {
   // These hold the pieces that are able to move
   U64 whitePieces = 0, blackPieces = 0;
   U64 whiteEdgePieces = 0, blackEdgePieces = 0;
+  U64 whiteCornerPieces = 0, blackCornerPieces = 0;
   
   // Get white pieces empty spots
   U64 whiteSpots = getPlayerEmptySpace(node->board, PlayerKind_White);
@@ -169,7 +171,6 @@ void StateNodeCalcCost(StateNode* node) {
         // piece reachable
         if (piecesList[j]) {
           whitePieces |= (piecesList[j] & ALL_WHITE);
-          whiteEdgePieces |= (piecesList[j] & ALL_WHITE & EDGE_PIECES);
         }
       }
       free(piecesList);
@@ -200,14 +201,20 @@ void StateNodeCalcCost(StateNode* node) {
     counter++;
   }
 
+  whiteEdgePieces |= (whitePieces & ALL_WHITE & EDGE_PIECES);
+  blackEdgePieces |= (blackPieces & ALL_BLACK & EDGE_PIECES);
+  whiteCornerPieces |= (whitePieces & ALL_WHITE & CORNER_PIECES);
+  blackCornerPieces |= (blackPieces & ALL_BLACK & CORNER_PIECES);
+
   // printBoardToConsole(&node->board);
   // printf("# of white pieces movable: %d\n", __builtin_popcountll(whitePieces));
   // printf("# of black pieces movable: %d\n", __builtin_popcountll(blackPieces));
   // printf("This state's score: %d\n", __builtin_popcountll(whitePieces) - __builtin_popcountll(blackPieces));
 
   node->score = ((__builtin_popcountll(whitePieces)-__builtin_popcountll(blackPieces)) + 
-                 (2*(__builtin_popcountll(whiteEdgePieces)))-(2*(__builtin_popcountll(blackEdgePieces))
-                 ));
+                 (2*(__builtin_popcountll(whiteEdgePieces)))-(2*(__builtin_popcountll(blackEdgePieces))) +
+                 (3*(__builtin_popcountll(whiteCornerPieces))) - (3*(__builtin_popcountll(blackCornerPieces)))
+                 );
 }
 
 
