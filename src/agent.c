@@ -8,10 +8,10 @@
 #include "boardio.h"
 #include <time.h>
 
-#define ALL_BLACK 0xAA55AA55AA55AA55
-#define ALL_WHITE 0x55AA55AA55AA55AA
+#define ALL_BLACK     0xAA55AA55AA55AA55
+#define ALL_WHITE     0x55AA55AA55AA55AA
 #define DEPTH 5
-#define EDGE_PIECES 0x7E8181818181817E
+#define EDGE_PIECES   0x7E8181818181817E
 #define CORNER_PIECES 0x8100000000000081
 
 #define INT_MAX 127
@@ -212,7 +212,6 @@ void StateNodeCalcCost(StateNode* node) {
   // printf("This state's score: %d\n", __builtin_popcountll(whitePieces) - __builtin_popcountll(blackPieces));
 
   node->score = ((__builtin_popcountll(whitePieces)-__builtin_popcountll(blackPieces)) + 
-                 (2*(__builtin_popcountll(whiteEdgePieces)))-(2*(__builtin_popcountll(blackEdgePieces))) +
                  (3*(__builtin_popcountll(whiteCornerPieces))) - (3*(__builtin_popcountll(blackCornerPieces)))
                  );
 }
