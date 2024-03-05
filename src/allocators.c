@@ -104,11 +104,11 @@ StateNode *StateNodePoolAlloc(StateNodePool *pool) {
 }
 
 void StateNodePoolFree(StateNodePool *pool, StateNode *node) {
-  StateNode *prev = node->prev;
-  StateNode *next = node->next;
+  // StateNode *prev = node->prev;
+  // StateNode *next = node->next;
 
-  if (prev) prev->next = next;
-  if (next) next->prev = prev;
+  // if (prev) prev->next = next;
+  // if (next) next->prev = prev;
 
   node->next = pool->freeList;
   pool->freeList = node;

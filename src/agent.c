@@ -7,13 +7,28 @@
 #include <string.h>
 #include "boardio.h"
 #include <time.h>
-#include <limits.h>
 
 #define ALL_BLACK 0xAA55AA55AA55AA55
 #define ALL_WHITE 0x55AA55AA55AA55AA
 #define DEPTH 5
 
+#define INT_MAX 127
+#define INT_MIN -128
+
 bool shiftValid(U64 jump, U8 shift, bool max);
+
+
+void freeAllChildrenNodes(StateNodePool* pool, StateNode* node) {
+  if (!node) return;
+
+  StateNode* freeNode;
+  while (node) {
+    freeNode = node;
+    freeAllChildrenNodes(pool, freeNode->firstChild);
+    node = node->next;
+    StateNodePoolFree(pool, freeNode);
+  }
+}
 
 
 bool isOver(StateNode* node) {
@@ -56,6 +71,9 @@ bool isOver(StateNode* node) {
     checker >>= 1;
     counter++;
   }
+
+  if (!whitePieces) node->score = INT_MIN;
+  if (!blackPieces) node->score = INT_MAX;
 
   return !(whitePieces && blackPieces);
 }
@@ -103,9 +121,15 @@ void agentMove(U8 agentPlayer, BitBoard* board, StateNodePool *pool, int depth) 
     else if (agentPlayer == PlayerKind_Black && child->score < newState->score) newState = child;
     // printf("State score: %d\n", child->score);
   }
-
+  
   printf("%s\n", newState->move);
+  if (newState->move[0] == '\0') {
+    printf("Lost");
+  }
   *board = newState->board;
+
+  // Free all children of our state node
+  freeAllChildrenNodes(pool, stateNode);
 }
 
 
@@ -139,6 +163,7 @@ void StateNodeCalcCost(StateNode* node) {
           whitePieces |= (piecesList[j] & ALL_WHITE);
         }
       }
+      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -159,6 +184,7 @@ void StateNodeCalcCost(StateNode* node) {
           blackPieces |= (piecesList[j] & ALL_BLACK);
         }
       }
+      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -210,6 +236,7 @@ StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, cha
           StateNodePushChild(parent, child);
         }
       }
+      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -221,8 +248,14 @@ StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, cha
 
 // For the minimax functions
 I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta, I32 maximizingPlayer) {
+  
   // printf("Depth remaining: %d\n", depth);
-  if (depth == 0 || isOver(node)) {
+
+  if (isOver(node)) {
+    return node->score;
+  }
+  
+  if (depth == 0) {
     //Run Evaluation Function
     StateNodeCalcCost(node);
     return node->score;
@@ -387,20 +420,24 @@ bool shiftValid(U64 jump, U8 shift, bool max) {
 }
 
 void StateNodePushChild(StateNode *parent, StateNode *child) {
+  // StateNode* oldChild = parent->firstChild;
+  // child->next = oldChild;
+  // parent->firstChild = child;
+
   if (parent->lastChild) {
     MyAssert(parent->firstChild);
     // link parent to new child
     StateNode *oldLast = parent->lastChild;
     parent->lastChild = child;
     // link children to each other
-    child->prev = oldLast;
+    // child->prev = oldLast;
     oldLast->next = child;
     // increase child count (child count could be useless)
-    parent->childCount++;
+    // parent->childCount++;
   } else {
     parent->firstChild = child;
     parent->lastChild = child;
-    parent->childCount = 1;
+    // parent->childCount = 1;
   }
 }
 
