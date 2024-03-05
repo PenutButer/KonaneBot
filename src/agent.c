@@ -11,7 +11,7 @@
 #define ALL_BLACK     0xAA55AA55AA55AA55
 #define ALL_WHITE     0x55AA55AA55AA55AA
 #define DEPTH 5
-#define EDGE_PIECES   0x7E8181818181817E
+#define EDGE_PIECES   0x1800008181000018
 #define CORNER_PIECES 0x8100000000000081
 
 #define INT_MAX 127
@@ -33,7 +33,7 @@ void freeAllChildrenNodes(StateNodePool* pool, StateNode* node) {
 }
 
 
-bool isOver(StateNode* node) {
+bool isOver(StateNode* node, I32 maximizingPlayer) {
   U64 whitePieces = 0, blackPieces = 0;
   U64 whiteSpots = getPlayerEmptySpace(node->board, PlayerKind_White);
   U8 counter = 0;
@@ -49,6 +49,7 @@ bool isOver(StateNode* node) {
           whitePieces |= (piecesList[j] & ALL_WHITE);
         }
       }
+      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -69,21 +70,19 @@ bool isOver(StateNode* node) {
           blackPieces |= (piecesList[j] & ALL_BLACK);
         }
       }
+      free(piecesList);
     }
     checker >>= 1;
     counter++;
   }
 
-  // White pieces can't capture -> set this node as extremely black favoured
-  if (!whitePieces) node->score = INT_MIN;
+  if (whitePieces && blackPieces) return false;
 
-  // White pieces can't capture -> set this node as extremely white favoured
-  if (!blackPieces) node->score = INT_MAX;
+  if (!maximizingPlayer && (whitePieces || !blackPieces)) node->score = INT_MAX;
+  if (maximizingPlayer && (blackPieces || !whitePieces)) node->score = INT_MIN;
 
-  // Both pieces can't move, give this state a 0
-  if (!whitePieces && !blackPieces) node->score = 0;
+  return true; 
 
-  return !(whitePieces && blackPieces);
 }
 
 
@@ -118,7 +117,7 @@ void agentMove(U8 agentPlayer, BitBoard* board, StateNodePool *pool, int depth) 
   // Go through all children and set their score as minimax()
   for (StateNode* child = stateNode->firstChild; child; child=child->next) {
     child->score = minimax(pool, child, depth, INT_MIN, INT_MAX, (agentPlayer == PlayerKind_White) ?
-      1 : 0);
+      false : true);
   }
 
   // Go through all children and print their score
@@ -201,8 +200,8 @@ void StateNodeCalcCost(StateNode* node) {
     counter++;
   }
 
-  whiteEdgePieces |= (whitePieces & ALL_WHITE & EDGE_PIECES);
-  blackEdgePieces |= (blackPieces & ALL_BLACK & EDGE_PIECES);
+  //whiteEdgePieces |= (whitePieces & ALL_WHITE & EDGE_PIECES);
+  //blackEdgePieces |= (blackPieces & ALL_BLACK & EDGE_PIECES);
   whiteCornerPieces |= (whitePieces & ALL_WHITE & CORNER_PIECES);
   blackCornerPieces |= (blackPieces & ALL_BLACK & CORNER_PIECES);
 
@@ -212,8 +211,8 @@ void StateNodeCalcCost(StateNode* node) {
   // printf("This state's score: %d\n", __builtin_popcountll(whitePieces) - __builtin_popcountll(blackPieces));
 
   node->score = ((__builtin_popcountll(whitePieces)-__builtin_popcountll(blackPieces)) + 
-                 (2*(__builtin_popcountll(whiteEdgePieces)))-(2*(__builtin_popcountll(blackEdgePieces))) +
-                 (4*(__builtin_popcountll(whiteCornerPieces))) - (4*(__builtin_popcountll(blackCornerPieces)))
+                 ((__builtin_popcountll(whiteEdgePieces))) - ((__builtin_popcountll(blackEdgePieces))) +
+                 ((__builtin_popcountll(whiteCornerPieces))) - ((__builtin_popcountll(blackCornerPieces)))
                  );
 }
 
@@ -270,11 +269,14 @@ I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta
   
   // printf("Depth remaining: %d\n", depth);
 
-  if (isOver(node)) {
+  if (isOver(node, maximizingPlayer)) {
     return node->score;
   }
   
-  if (depth == 0) {
+  if (maximizingPlayer) StateNodeGenerateChildren(pool, node, PlayerKind_White);
+  else StateNodeGenerateChildren(pool, node, PlayerKind_Black);
+
+  if (depth == 0 || !node->firstChild) {
     //Run Evaluation Function
     StateNodeCalcCost(node);
     return node->score;
@@ -284,7 +286,7 @@ I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta
     I32 maxEval = INT_MIN;
 
     // Generate children as white
-    StateNodeGenerateChildren(pool, node, PlayerKind_White);
+    //StateNodeGenerateChildren(pool, node, PlayerKind_White);
     
     for (StateNode* child = node->firstChild; child != NULL; child = child->next) {
       I32 eval = minimax(pool, child, depth -1, alpha, beta, false);
@@ -301,7 +303,7 @@ I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta
     I32 minEval = INT_MAX;
 
     // Generate children as black
-    StateNodeGenerateChildren(pool, node, PlayerKind_Black);
+    //StateNodeGenerateChildren(pool, node, PlayerKind_Black);
 
     for (StateNode* child = node->firstChild; child != NULL; child = child->next) {
       I32 eval = minimax(pool, child, depth -1, alpha, beta, true);
