@@ -212,7 +212,8 @@ void StateNodeCalcCost(StateNode* node) {
   // printf("This state's score: %d\n", __builtin_popcountll(whitePieces) - __builtin_popcountll(blackPieces));
 
   node->score = ((__builtin_popcountll(whitePieces)-__builtin_popcountll(blackPieces)) + 
-                 (3*(__builtin_popcountll(whiteCornerPieces))) - (3*(__builtin_popcountll(blackCornerPieces)))
+                 (2*(__builtin_popcountll(whiteEdgePieces)))-(2*(__builtin_popcountll(blackEdgePieces))) +
+                 (4*(__builtin_popcountll(whiteCornerPieces))) - (4*(__builtin_popcountll(blackCornerPieces)))
                  );
 }
 
