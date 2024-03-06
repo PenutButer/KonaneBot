@@ -138,9 +138,6 @@ int main(int argc, char** argv) {
   bool blackIsAgent = (agentPlayer == PlayerKind_White) ? false : true;
   int turns = 1;
   
-  // Note: 
-  //    -> Odd depth = ends by checking score on opponent's turn
-  //    -> Even depth = ends by checking score on agent turn
   int depth = 6;
   while (gaming) {
     if (turns >= 6) depth = 5;
