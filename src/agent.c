@@ -24,15 +24,18 @@ void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piec
 
 
 void freeAllChildrenNodes(StateNodePool* pool, StateNode* node) {
-  if (!node) return;
+  // if (!node) return;
 
-  StateNode* freeNode;
-  while (node) {
-    freeNode = node;
-    freeAllChildrenNodes(pool, freeNode->firstChild);
-    node = node->next;
-    StateNodePoolFree(pool, freeNode);
-  }
+  // StateNode* freeNode;
+  // while (node) {
+  //   freeNode = node;
+  //   freeAllChildrenNodes(pool, freeNode->firstChild);
+  //   node = node->next;
+  //   StateNodePoolFree(pool, freeNode);
+  // }
+  Arena* arena = pool->arena;
+  ArenaReset(arena);
+  StateNodePoolInit(arena);
 }
 
 
@@ -46,9 +49,9 @@ bool isOver(StateNode* node, I32 maximizingPlayer) {
     jumpSpace = checker & 1;
     if (jumpSpace) {
       startSpot = jumpSpace << counter;
-      U8* piecesList = getMovablePieces(startSpot, node->board, PlayerKind_White);
+      U8 piecesList[4];
+      getMovablePieces(piecesList, startSpot, node->board, PlayerKind_White);
       addMovablePieces(node, piecesList, &whitePieces, startSpot, PlayerKind_White);
-      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -62,9 +65,9 @@ bool isOver(StateNode* node, I32 maximizingPlayer) {
     jumpSpace = checker & 1;
     if (jumpSpace) {
       startSpot = jumpSpace << counter;
-      U8* piecesList = getMovablePieces(startSpot, node->board, PlayerKind_Black);
+      U8 piecesList[4];
+      getMovablePieces(piecesList, startSpot, node->board, PlayerKind_Black);
       addMovablePieces(node, piecesList, &blackPieces, startSpot, PlayerKind_Black);
-      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -170,9 +173,9 @@ void StateNodeCalcCost(StateNode* node) {
     jumpSpace = checker & 1;
     if (jumpSpace) {
       startSpot = (jumpSpace<<counter);
-      U8* piecesList = getMovablePieces(startSpot, node->board, PlayerKind_White);
+      U8 piecesList[4];
+      getMovablePieces(piecesList, startSpot, node->board, PlayerKind_White);
       addMovablePieces(node, piecesList, &whitePieces, startSpot, PlayerKind_White);
-      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -186,9 +189,9 @@ void StateNodeCalcCost(StateNode* node) {
     jumpSpace = checker & 1;
     if (jumpSpace) {
       startSpot = (jumpSpace<<counter);
-      U8* piecesList = getMovablePieces(startSpot, node->board, PlayerKind_Black);
+      U8 piecesList[4];
+      getMovablePieces(piecesList, startSpot, node->board, PlayerKind_Black);
       addMovablePieces(node, piecesList, &blackPieces, startSpot, PlayerKind_Black);
-      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -220,9 +223,10 @@ StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, cha
     jumpSpace = checker & 1;
     if (jumpSpace) {
       startSpot = jumpSpace << counter;
-      U8* piecesList = getMovablePieces(startSpot, parent->board, playerKind);
+      U8 piecesList[4];
+      getMovablePieces(piecesList, startSpot, parent->board, playerKind);
+      // U8* piecesList = getMovablePieces(startSpot, parent->board, playerKind);
       generateChildrenDirections(pool, parent, piecesList, startSpot, playerKind);
-      free(piecesList);
     }
     checker >>= 1;
     counter++;
@@ -304,15 +308,12 @@ U64 getPlayerEmptySpace(BitBoard board, char player) {
  * 2 - down
  * 3 - right
  */
-U8* getMovablePieces(U64 jump, BitBoard board, char player) {
-  // Not using arena since this is not a state
-  U8* piecesModified = malloc(4*sizeof(U8));
-
+void getMovablePieces(U8* pList, U64 jump, BitBoard board, char player) {
   // Initialize values
-  piecesModified[0] &= 0;
-  piecesModified[1] &= 0;
-  piecesModified[2] &= 0;
-  piecesModified[3] &= 0;
+  pList[0] &= 0;
+  pList[1] &= 0;
+  pList[2] &= 0;
+  pList[3] &= 0;
 
   U8 dirs = 0xF;
   U64 playerBoard = (player == PlayerKind_White) ? board.whole & ALL_WHITE : board.whole & ALL_BLACK;
@@ -329,12 +330,12 @@ U8* getMovablePieces(U64 jump, BitBoard board, char player) {
       checkJump = jump << vShift;
       if (checkJump & playerBoard) {
         dirs &= 0x7;
-        // piecesModified[0] ^= checkJump;
-        piecesModified[0] |= (1<<(checkRange+1));
+        // pList[0] ^= checkJump;
+        pList[0] |= (1<<(checkRange+1));
         
       }
       else if ((checkRange+1)%2 && checkJump & ~oppBoard) dirs &= 0x7;
-      else if (checkJump & oppBoard) piecesModified[0] |= (1<<(checkRange+1));
+      else if (checkJump & oppBoard) pList[0] |= (1<<(checkRange+1));
     } else dirs &= 0x7;
 
     // Check left direction
@@ -345,10 +346,10 @@ U8* getMovablePieces(U64 jump, BitBoard board, char player) {
           (hShift%2) && (checkJump & allPlayerBoard)) dirs &= 0xB;
       else if (checkJump & playerBoard) {
         dirs &= 0xB;
-        piecesModified[1] |= (1<<(checkRange+1));
+        pList[1] |= (1<<(checkRange+1));
       }
       else if (hShift%2 && checkJump & ~oppBoard) dirs &= 0xB;
-      else if (checkJump & oppBoard) piecesModified[1] |= (1<<(checkRange+1));
+      else if (checkJump & oppBoard) pList[1] |= (1<<(checkRange+1));
     } else dirs &= 0xB;
     
     // Check down direction
@@ -356,10 +357,10 @@ U8* getMovablePieces(U64 jump, BitBoard board, char player) {
       checkJump = jump >> vShift;
       if (checkJump & playerBoard) {
         dirs &= 0xD;
-        piecesModified[2] |= (1<<(checkRange+1));
+        pList[2] |= (1<<(checkRange+1));
       }
       else if ((checkRange+1)%2 && checkJump & ~oppBoard) dirs &= 0xD;
-      else if (checkJump & oppBoard) piecesModified[2] |= (1<<(checkRange+1));
+      else if (checkJump & oppBoard) pList[2] |= (1<<(checkRange+1));
     } else dirs &= 0xD;
 
     // Check right direction
@@ -369,10 +370,10 @@ U8* getMovablePieces(U64 jump, BitBoard board, char player) {
           (hShift%2) && (checkJump & allPlayerBoard)) dirs &= 0xE;
       else if (checkJump & playerBoard) {
         dirs &= 0xE;
-        piecesModified[3] |= (1<<(checkRange+1));
+        pList[3] |= (1<<(checkRange+1));
       }
       else if (hShift%2 && (checkJump & ~oppBoard)) dirs &= 0xE;
-      else if (checkJump & oppBoard) piecesModified[3] |= (1<<(checkRange+1));
+      else if (checkJump & oppBoard) pList[3] |= (1<<(checkRange+1));
     } else dirs &= 0xE;
   }
 
@@ -382,8 +383,6 @@ U8* getMovablePieces(U64 jump, BitBoard board, char player) {
   // if (!(piecesModified[1] & playerBoard)) piecesModified[1] = 0;
   // if (!(piecesModified[2] & playerBoard)) piecesModified[2] = 0;
   // if (!(piecesModified[3] & playerBoard)) piecesModified[3] = 0;
-
-  return piecesModified;
 } 
 
 /*

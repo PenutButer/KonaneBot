@@ -15,7 +15,7 @@
 U64 getUpMove(BitBoard board, char player);
 
 U64 getPlayerEmptySpace(BitBoard board, char player);
-U8* getMovablePieces(U64 jump, BitBoard board, char player); 
+void getMovablePieces(U8* pList, U64 jump, BitBoard board, char player); 
 StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, char playerKind);
 U64 StateNodeCountChildren(StateNode *node);
 void StateNodePushChild(StateNode *parent, StateNode *child);
