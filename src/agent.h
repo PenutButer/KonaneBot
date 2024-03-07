@@ -16,7 +16,7 @@ U64 getUpMove(BitBoard board, char player);
 
 U64 getPlayerEmptySpace(BitBoard board, char player);
 void getMovablePieces(U8* pList, U64 jump, BitBoard board, char player); 
-StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, char playerKind);
+StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, char playerKind, U64* statesCreated);
 U64 StateNodeCountChildren(StateNode *node);
 void StateNodePushChild(StateNode *parent, StateNode *child);
 void StateNodeCalcCost(StateNode* node);
@@ -32,7 +32,7 @@ static inline int min(int x, int y) {
   return x < y ? x : y;
 }
 // Minimax Algorithm functions
-I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta, I32 maximizingPlayer);
+I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta, I32 maximizingPlayer, U64* statesCreated);
 
 
 #endif

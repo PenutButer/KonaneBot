@@ -13,6 +13,7 @@
 #define DEPTH 5
 #define EDGE_PIECES   0x1800008181000018
 #define CORNER_PIECES 0x8100000000000081
+#define MAX_TIME 20
 
 #define INT_MAX 127
 #define INT_MIN -128
@@ -20,7 +21,7 @@
 bool shiftValid(U64 jump, U8 shift, bool max);
 void addMovablePieces(StateNode* node, U8* piecesList, U64* colorSpots, U64 startSpot, char colorPiece);
 void createChild(StateNodePool* pool, StateNode* parent, U64 newDirection, U64 startSpot, U64 allPlayer);
-void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piecesList, U64 startSpot, char playerKind);
+void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piecesList, U64 startSpot, char playerKind, U64* statesCreated);
 
 
 void freeAllChildrenNodes(StateNodePool* pool, StateNode* node) {
@@ -112,17 +113,25 @@ void agentMove(U8 agentPlayer, BitBoard* board, StateNodePool *pool, int depth) 
   }
 
   // Determine best move: Generate children of possible moves
+  U64 statesCreated = 0;
   StateNode* stateNode = StateNodePoolAlloc(pool);
   stateNode->board = *board;
-  StateNodeGenerateChildren(pool, stateNode, agentPlayer);
+  StateNodeGenerateChildren(pool, stateNode, agentPlayer, &statesCreated);
 
   
 
   // Go through all children and set their score as minimax()
-  for (StateNode* child = stateNode->firstChild; child; child=child->next) {
-    child->score = minimax(pool, child, depth, INT_MIN, INT_MAX, (agentPlayer == PlayerKind_White) ?
-      false : true);
+  U64 startTime = time(NULL);
+  U64 currTime = time(NULL);
+  while (currTime - startTime <= MAX_TIME - 15) {
+    for (StateNode* child = stateNode->firstChild; child; child=child->next) {
+      child->score = minimax(pool, child, depth, INT_MIN, INT_MAX, (agentPlayer == PlayerKind_White) ?
+      false : true, &statesCreated);
+    }
+    depth++;
+    currTime = time(NULL);
   }
+  printf("Reached depth %d in %llu seconds\nwith %llu non-unique states created\n\n", depth-1, currTime - startTime, statesCreated);
 
   // Go through all children and print their score
   I32 bestScore = (agentPlayer == PlayerKind_White) ? INT_MAX : INT_MIN;
@@ -130,10 +139,10 @@ void agentMove(U8 agentPlayer, BitBoard* board, StateNodePool *pool, int depth) 
   for (StateNode* child = stateNode->firstChild; child; child=child->next) {
     if (agentPlayer == PlayerKind_White && child->score > newState->score) newState = child;
     else if (agentPlayer == PlayerKind_Black && child->score < newState->score) newState = child;
-    // printf("Move %s leads to state score: %d\n", child->move, child->score);
+    printf("Move %s leads to state score: %d\n", child->move, child->score);
   }
   
-  printf("%s\n", newState->move);
+  printf("\nAgent move: %s\n", newState->move);
   if (newState->move[0] == '\0') {
     printf("Lost");
   }
@@ -208,7 +217,7 @@ void StateNodeCalcCost(StateNode* node) {
 }
 
 
-StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, char playerKind) {
+StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, char playerKind, U64* statesCreated) {
   // 0b01 if black pieces, 0b10 if white pieces
 
   U64 currentSpace = (playerKind == PlayerKind_White) ? 0x2 : 0x1;
@@ -225,8 +234,7 @@ StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, cha
       startSpot = jumpSpace << counter;
       U8 piecesList[4];
       getMovablePieces(piecesList, startSpot, parent->board, playerKind);
-      // U8* piecesList = getMovablePieces(startSpot, parent->board, playerKind);
-      generateChildrenDirections(pool, parent, piecesList, startSpot, playerKind);
+      generateChildrenDirections(pool, parent, piecesList, startSpot, playerKind, statesCreated);
     }
     checker >>= 1;
     counter++;
@@ -237,7 +245,7 @@ StateNode* StateNodeGenerateChildren(StateNodePool *pool, StateNode *parent, cha
 
 
 // For the minimax functions
-I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta, I32 maximizingPlayer) {
+I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta, I32 maximizingPlayer, U64* statesCreated) {
   
   // printf("Depth remaining: %d\n", depth);
 
@@ -245,8 +253,8 @@ I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta
     return node->score;
   }
   
-  if (maximizingPlayer) StateNodeGenerateChildren(pool, node, PlayerKind_White);
-  else StateNodeGenerateChildren(pool, node, PlayerKind_Black);
+  if (maximizingPlayer) StateNodeGenerateChildren(pool, node, PlayerKind_White, statesCreated);
+  else StateNodeGenerateChildren(pool, node, PlayerKind_Black, statesCreated);
 
   if (depth == 0 || !node->firstChild) {
     //Run Evaluation Function
@@ -261,7 +269,7 @@ I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta
     //StateNodeGenerateChildren(pool, node, PlayerKind_White);
     
     for (StateNode* child = node->firstChild; child != NULL; child = child->next) {
-      I32 eval = minimax(pool, child, depth -1, alpha, beta, false);
+      I32 eval = minimax(pool, child, depth -1, alpha, beta, false, statesCreated);
       maxEval = max(maxEval, eval);
       alpha = max(alpha, eval);
       if (beta <= alpha) {
@@ -278,7 +286,7 @@ I32 minimax(StateNodePool *pool, StateNode* node, I32 depth, I32 alpha, I32 beta
     //StateNodeGenerateChildren(pool, node, PlayerKind_Black);
 
     for (StateNode* child = node->firstChild; child != NULL; child = child->next) {
-      I32 eval = minimax(pool, child, depth -1, alpha, beta, true);
+      I32 eval = minimax(pool, child, depth -1, alpha, beta, true, statesCreated);
       minEval = min(minEval, eval);
       beta = min(beta, eval);
       if (beta <= alpha) {
@@ -507,7 +515,7 @@ void addMovablePieces(StateNode* node, U8* piecesList, U64* colorSpots, U64 star
 }
 
 
-void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piecesList, U64 startSpot, char playerKind) {
+void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piecesList, U64 startSpot, char playerKind, U64* statesCreated) {
   U64 position;
   U64 newUp = 0, newLeft = 0, newDown = 0, newRight = 0;
   U64 allPlayer = (playerKind == PlayerKind_White) ? ALL_WHITE : ALL_BLACK;
@@ -528,6 +536,7 @@ void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piec
     // Only create new child if the direction has player piece
     if (newUp & parent->board.whole & allPlayer)
       createChild(pool, parent, newUp, startSpot, allPlayer);
+      (*statesCreated)++;
   }
   
   // LEFT
@@ -545,6 +554,7 @@ void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piec
     }
     if (newLeft & parent->board.whole & allPlayer)
       createChild(pool, parent, newLeft, startSpot, allPlayer);
+      (*statesCreated)++;
   }
 
   // DOWN
@@ -562,6 +572,7 @@ void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piec
     }
     if (newDown & parent->board.whole & allPlayer)
       createChild(pool, parent, newDown, startSpot, allPlayer);
+      (*statesCreated)++;
   }
 
   // RIGHT
@@ -579,6 +590,7 @@ void generateChildrenDirections(StateNodePool* pool, StateNode* parent, U8* piec
     }
     if (newRight & parent->board.whole & allPlayer)
       createChild(pool, parent, newRight, startSpot, allPlayer);
+      (*statesCreated)++;
   }
 }
 

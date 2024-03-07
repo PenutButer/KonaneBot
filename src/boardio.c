@@ -188,7 +188,7 @@ Coord* multipleCoordsInput() {
 void mainInput(BitBoard* board, char player) {
   U64 allPlayerBoard = (player == PlayerKind_White) ? allWhite : allBlack;
   
-  // printf("Your move: ");
+  printf("Your move: ");
 
   // First move
   if (!((board->whole & allPlayerBoard) ^ allPlayerBoard)) {
@@ -241,11 +241,11 @@ void mainInput(BitBoard* board, char player) {
   // & entire table and | coord1, coord2
   // example move:
   // WBOBOB
-  // bit generation gives -> 11111, but
-  // & entire we then get -> 11010
+  // bit generation gives -> 111110, but
+  // & entire we then get -> 110100
   // coord 1, current white piece
   // coord 2, where white piece will be.
-  // after | index of both -> 11011. can use ^ with board now.
+  // after | index of both -> 110110. can use ^ with board now.
   startBit &= board->whole;
   startBit |= 1llu<<IndexFromCoord(coord1);
   startBit |= 1llu<<IndexFromCoord(coord2);
@@ -258,10 +258,13 @@ void printBoardToConsole(BitBoard* board) {
   int boardShift = 63;
   char colour;
 
+  char background[] = "\033[48;5;94m";
+
   printf("\n");
 
   // Row (123...)
   for (int i = 0; i < 10; i++) {
+    printf("%s", background);
     // Column (ABC...)
     for (int j = 0; j < 10; j++) {
       
@@ -269,34 +272,41 @@ void printBoardToConsole(BitBoard* board) {
       if (i == 0 || i == 9) {
         if (j >= 1 && j <= 8) {
           // 64 is char '@'
-          printf("%c ", 64+j);
+          printf("\033[38;5;255m%c ", 64+j);
         }
         else {
-          printf("  ");
+          if (j == 0) printf("\033[38;5;255m   ");
+          else if (j == 9) printf("\033[38;5;255m  ");
         }
         continue;
       }
 
       // Column printing
       if (j == 0 || j == 9) {
-        // Print row numbers at this spots
+        // Print row numbers at these spots
         // 57 is char '9'
-        printf("%c ", 57-i);
+        if (j == 9) printf("\033[38;5;255m%c ", 57-i);
+        else printf("\033[38;5;255m %c ", 57-i);
       }
-      
+
       else {
         // Print board status
-        if (!((board->whole & (1llu << boardShift)) & allPieces)) colour = 'O';
+        if (!((board->whole & (1llu << boardShift)) & allPieces)) colour = ' ';
         else if ((board->whole & (1llu << boardShift)) & allBlack) colour = 'B';
         else if ((board->whole & (1llu << boardShift)) & allWhite) colour = 'W';
-        printf("%c ", colour);
+
+        if (j == 8 && colour == 'B') printf("\033[38;5;232m%s⬤\033[38;5;255m ", background);
+        else if (j == 8 && colour == 'W') printf("\033[38;5;255m%s⬤ ", background);
+        else if (colour == 'B') printf("\033[38;5;232m%s⬤ \033[38;5;255m", background);
+        else if (colour == 'W') printf("\033[38;5;255m%s⬤ ", background);
+        else printf("%s  ", background);
         boardShift--;
       }
     }
-    printf("\n");
+    printf("\033[0m\n");
   }
 
-  printf("\n");
+  printf("\n\033[0m");
 
   return;
 }
